@@ -1,0 +1,30 @@
+---
+- hosts: local
+  gather_facts: false
+
+  vars_prompt:
+    - name: "ansible_become_pass"
+      prompt: "Sudo password"
+      private: yes
+
+  tasks:
+#    - name: Create a ansible-ubuntu-bionic container
+#      lxc_container:
+#        name: ansible-ubuntu-bionic
+#        container_log: true
+#        template: download
+#        state: stopped
+#        template_options: --dist ubuntu --release bionic --arch amd64
+#        lxc_path: /var/lib/lxc
+#      become: true
+
+    - name: Create a started centos7 container
+      lxc_container:
+        name: ansible-centos7
+        container_log: true
+        template: download
+        state: started
+        template_options: --dist centos --release 7 --arch amd64
+        lxc_path: /var/lib/lxc
+      become: true
+
