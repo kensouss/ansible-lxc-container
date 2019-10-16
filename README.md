@@ -1,8 +1,8 @@
-# Ansible LXC
+# ansible-web-project
 
 ## Description
 
-This project help to create and configure an new lxc machine
+This project help to create and configure an web project on lxc container
 
 ## Requirements
 
