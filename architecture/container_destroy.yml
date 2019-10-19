@@ -21,3 +21,18 @@
       become: true
       tags:
         - destroy
+
+    - name: Add new entry of the container in local /etc/hosts
+      lineinfile:
+        dest: /etc/hosts
+        regexp: "{{vm_name}}$"
+        state: absent
+      become: true
+      tags: [destroy]
+
+    - name: Delete the entry from ./created_vms_list.md
+      lineinfile:
+        dest: ./created_vms_list.md
+        regexp: '^\|{{vm_name}}'
+        state: absent
+      tags: [destroy]

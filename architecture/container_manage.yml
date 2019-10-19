@@ -23,6 +23,13 @@
       become: true
       tags: [init]
 
+    - name: Add new entry in ./created_vms_list.md
+      lineinfile:
+        dest: ./created_vms_list.md
+        line: "|{{vm_name}}||"
+        state: present
+      tags: [init]
+
     - name: Install basic tools
       lxc_container:
         name: "{{vm_name}}"
@@ -94,6 +101,14 @@
         line: "{{vm_ip}} {{vm_name}}"
         state: present
       become: true
+      tags: [network]
+
+    - name: Add new entry in ./created_vms_list.md
+      lineinfile:
+        dest: ./created_vms_list.md
+        regexp: '^\|{{vm_name}}'
+        line: "|{{vm_name}}|{{vm_ip}}|"
+        state: present
       tags: [network]
 
     - name: Stop the container
