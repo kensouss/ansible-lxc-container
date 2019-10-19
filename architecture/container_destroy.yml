@@ -12,9 +12,12 @@
 
   tasks:
 
-    - name: Stop {{vm_name}} container
+    - name: Destroy the container
       lxc_container:
         name: "{{vm_name}}"
         container_log: true
-        state: stopped
+        template: download
+        state: absent
       become: true
+      tags:
+        - destroy

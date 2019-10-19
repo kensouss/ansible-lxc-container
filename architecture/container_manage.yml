@@ -1,0 +1,106 @@
+---
+- hosts: local
+  gather_facts: false
+
+  vars_files:
+    - ./vars/vars.yml
+
+  vars_prompt:
+    - name: "ansible_become_pass"
+      prompt: "Sudo password"
+      private: yes
+
+  tasks:
+
+    - name: Create or start the container
+      lxc_container:
+        name: "{{vm_name}}"
+        container_log: true
+        template: download
+        state: started
+        template_options: --dist centos --release 7 --arch amd64
+        lxc_path: /var/lib/lxc
+      become: true
+      tags: [init]
+
+    - name: Install basic tools
+      lxc_container:
+        name: "{{vm_name}}"
+        container_log: true
+        state: started
+        container_command: |
+          yum -y install openssh-server net-tools
+      become: true
+      tags: [basics]
+
+    - name: Configure the container ssh access
+      lxc_container:
+        name: "{{vm_name}}"
+        container_log: true
+        state: started
+        container_command: |
+          service sshd start
+          useradd {{ vm_ssh_user|default('admin') }}
+          echo "{{ vm_ssh_user|default('admin') }}:{{ vm_ssh_user|default('admin') }}" | chpasswd
+          mkdir /home/{{ vm_ssh_user|default('admin') }}/.ssh
+          echo {{ vm_user_ssh_authorized_key }} > /home/{{ vm_ssh_user|default('admin') }}/.ssh/authorized_keys
+          chown -R {{ vm_ssh_user|default('admin') }}:{{ vm_ssh_user|default('admin') }} /home/{{ vm_ssh_user|default('admin') }}/.ssh
+          chmod 700 /home/{{ vm_ssh_user|default('admin') }}/.ssh
+          chmod 600 /home/{{ vm_ssh_user|default('admin') }}/.ssh/authorized_keys
+      become: true
+      register: lxc
+      tags: [ssh_config]
+
+    - name: Configure the containers network
+      lxc_container:
+        name: "{{vm_name}}"
+        container_log: true
+        state: started
+        container_command: |
+          > /etc/sysconfig/network-scripts/ifcfg-eth0
+          cat <<EOF | tee -a /etc/sysconfig/network-scripts/ifcfg-eth0
+          ######## my config ##########
+          DEVICE=eth0
+          BOOTPROTO=static
+          ONBOOT=yes
+          HOSTNAME={{vm_name}}
+          NM_CONTROLLED=yes
+          TYPE=Ethernet
+          MTU=
+          IPADDR={{vm_ip}}
+          NETMASK=255.255.255.0
+          EOF
+          > /etc/sysconfig/network
+          cat <<EOF | tee -a /etc/sysconfig/network
+          ######## my config ##########
+          NETWORKING=yes
+          HOSTNAME={{vm_name}}
+          GATEWAY=10.0.3.1
+          EOF
+          > /etc/hosts
+          cat <<EOF | tee -a /etc/hosts
+          {{vm_ip}} localhost
+          {{vm_ip}} {{vm_name}}
+          {{vm_ip}} hostname
+          EOF
+          service network restart
+      become: true
+      register: lxc
+      tags: [network]
+
+    - name: Add new entry of the container in local /etc/hosts
+      lineinfile:
+        dest: /etc/hosts
+        line: "{{vm_ip}} {{vm_name}}"
+        state: present
+      become: true
+      tags: [network]
+
+    - name: Stop the container
+      lxc_container:
+        name: "{{vm_name}}"
+        container_log: true
+        state: stopped
+      become: true
+      tags:
+        - stop
